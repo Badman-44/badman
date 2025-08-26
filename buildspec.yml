@@ -5,16 +5,25 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-      - REPO_URI=${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/${PROJECT_NAME}-repo
+      - REPOSITORY_URI=${AWS_ACCOUNT_ID}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/${PROJECT_NAME}-repo
       - IMAGE_TAG=latest
   build:
     commands:
       - echo Building Docker image...
-      - docker build -t $REPO_URI:$IMAGE_TAG .
-      - docker push $REPO_URI:$IMAGE_TAG
+      # If Dockerfile is in root:
+      - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+      # If Dockerfile is inside a folder (example: app/), use:
+      # - docker build -t $REPOSITORY_URI:$IMAGE_TAG -f app/Dockerfile .
+      - echo Pushing Docker image...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
   post_build:
     commands:
       - echo Build completed on `date`
+      - echo Creating imagedefinitions.json for ECS deployment...
+      - printf '[{"name":"ecs-app","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+
 artifacts:
-  files: []
+  files:
+    - imagedefinitions.json
+
 
